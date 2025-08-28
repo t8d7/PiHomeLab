@@ -1,0 +1,47 @@
+---
+- name: Add Docker GPG key
+  apt_key:
+    url: https://download.docker.com/linux/ubuntu/gpg
+    state: present
+
+- name: Add Docker repository
+  apt_repository:
+    repo: "deb [arch=arm64] https://download.docker.com/linux/ubuntu {{ ansible_distribution_release }} stable"
+    state: present
+    update_cache: yes
+
+- name: Install containerd
+  apt:
+    name: containerd.io
+    state: present
+
+- name: Create containerd configuration directory
+  file:
+    path: "{{ containerd_config_dir }}"
+    state: directory
+    mode: '0755'
+
+- name: Generate default containerd configuration
+  shell: containerd config default > {{ containerd_config_dir }}/config.toml
+  args:
+    creates: "{{ containerd_config_dir }}/config.toml"
+
+- name: Configure containerd to use systemd cgroup driver
+  lineinfile:
+    path: "{{ containerd_config_dir }}/config.toml"
+    regexp: '^\s*SystemdCgroup\s*='
+    line: '            SystemdCgroup = true'
+    insertafter: '^\s*\[plugins\."io\.containerd\.grpc\.v1\.cri"\.containerd\.runtimes\.runc\.options\]'
+
+- name: Enable and start containerd
+  systemd:
+    name: containerd
+    enabled: yes
+    state: started
+    daemon_reload: yes
+
+- name: Add user to docker group (for containerd CLI access)
+  user:
+    name: "{{ ansible_user }}"
+    groups: docker
+    append: yes

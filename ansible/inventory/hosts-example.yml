@@ -1,0 +1,37 @@
+---
+all:
+  children:
+    k8s_cluster:
+      children:
+        k8s_masters:
+          hosts:
+            pi-master-01:
+              ansible_host: 192.168.1.100
+              k8s_role: master
+              k8s_node_labels:
+                node-role.kubernetes.io/control-plane: ""
+                node.kubernetes.io/exclude-from-external-load-balancers: ""
+        k8s_workers:
+          hosts:
+            pi-worker-01:
+              ansible_host: 192.168.1.101
+              k8s_role: worker
+              k8s_node_labels:
+                node-role.kubernetes.io/worker: ""
+            pi-worker-02:
+              ansible_host: 192.168.1.102
+              k8s_role: worker
+              k8s_node_labels:
+                node-role.kubernetes.io/worker: ""
+            pi-worker-03:
+              ansible_host: 192.168.1.103
+              k8s_role: worker
+              k8s_node_labels:
+                node-role.kubernetes.io/worker: ""
+      vars:
+        ansible_user: pi
+        ansible_ssh_private_key_file: ~/.ssh/id_rsa
+        k8s_version: "1.28"
+        container_runtime: containerd
+        pod_network_cidr: "10.244.0.0/16"
+        service_subnet: "10.96.0.0/12"

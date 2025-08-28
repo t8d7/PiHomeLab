@@ -1,0 +1,107 @@
+---
+- name: Create terraform user
+  user:
+    name: "{{ terraform_user }}"
+    shell: /bin/bash
+    create_home: yes
+    groups: docker
+    append: yes
+
+- name: Create .kube directory for terraform user
+  file:
+    path: "/home/{{ terraform_user }}/.kube"
+    state: directory
+    owner: "{{ terraform_user }}"
+    group: "{{ terraform_user }}"
+    mode: '0755'
+
+- name: Copy kubeconfig for terraform user
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ terraform_kubeconfig_path }}"
+    remote_src: yes
+    owner: "{{ terraform_user }}"
+    group: "{{ terraform_user }}"
+    mode: '0600'
+
+- name: Create terraform service account
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: ServiceAccount
+      metadata:
+        name: terraform
+        namespace: kube-system
+    kubeconfig: /etc/kubernetes/admin.conf
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Create terraform cluster role binding
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: rbac.authorization.k8s.io/v1
+      kind: ClusterRoleBinding
+      metadata:
+        name: terraform
+      roleRef:
+        apiGroup: rbac.authorization.k8s.io
+        kind: ClusterRole
+        name: cluster-admin
+      subjects:
+      - kind: ServiceAccount
+        name: terraform
+        namespace: kube-system
+    kubeconfig: /etc/kubernetes/admin.conf
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Get terraform service account token
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Secret
+    namespace: kube-system
+    label_selectors:
+      - kubernetes.io/service-account.name=terraform
+    kubeconfig: /etc/kubernetes/admin.conf
+  register: terraform_secret
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Create terraform kubeconfig with service account token
+  template:
+    src: terraform-kubeconfig.yaml.j2
+    dest: "{{ terraform_kubeconfig_path }}"
+    owner: "{{ terraform_user }}"
+    group: "{{ terraform_user }}"
+    mode: '0600'
+  vars:
+    cluster_name: "{{ k8s_cluster_name }}"
+    server_url: "https://{{ k8s_api_server_advertise_address }}:{{ k8s_api_server_bind_port }}"
+    ca_data: "{{ terraform_secret.resources[0].data['ca.crt'] }}"
+    token: "{{ terraform_secret.resources[0].data.token | b64decode }}"
+
+- name: Copy kubeconfig to terraform directory
+  copy:
+    src: "{{ terraform_kubeconfig_path }}"
+    dest: "{{ playbook_dir }}/../terraform/kubeconfig.yaml"
+    remote_src: yes
+    mode: '0600'
+  delegate_to: localhost
+
+- name: Install kubectl for terraform user
+  get_url:
+    url: "https://dl.k8s.io/release/v{{ k8s_version }}.0/bin/linux/arm64/kubectl"
+    dest: "/home/{{ terraform_user }}/kubectl"
+    owner: "{{ terraform_user }}"
+    group: "{{ terraform_user }}"
+    mode: '0755'
+
+- name: Add kubectl to terraform user's PATH
+  lineinfile:
+    path: "/home/{{ terraform_user }}/.bashrc"
+    line: 'export PATH=$PATH:/home/{{ terraform_user }}'
+    create: yes
+    owner: "{{ terraform_user }}"
+    group: "{{ terraform_user }}"

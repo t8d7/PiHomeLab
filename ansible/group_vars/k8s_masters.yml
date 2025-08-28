@@ -1,0 +1,17 @@
+---
+# Master node specific configuration
+k8s_control_plane_endpoint: "{{ hostvars[groups['k8s_masters'][0]]['ansible_host'] }}:{{ k8s_api_server_port }}"
+
+# etcd configuration
+etcd_data_dir: "/var/lib/etcd"
+
+# API server configuration
+k8s_api_server_bind_port: "{{ k8s_api_server_port }}"
+k8s_api_server_advertise_address: "{{ ansible_default_ipv4.address }}"
+
+# Controller manager and scheduler
+k8s_controller_manager_bind_address: "0.0.0.0"
+k8s_scheduler_bind_address: "0.0.0.0"
+
+# Certificates and keys directory
+k8s_pki_dir: "/etc/kubernetes/pki"

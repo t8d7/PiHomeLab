@@ -1,0 +1,13 @@
+---
+# Worker node specific configuration
+kubelet_extra_args:
+  - "--node-labels=node-role.kubernetes.io/worker="
+  - "--register-with-taints="
+
+# Resource limits for worker nodes
+kubelet_max_pods: 110
+kubelet_pod_pids_limit: 2048
+
+# Container runtime configuration
+containerd_config_dir: "/etc/containerd"
+containerd_data_dir: "/var/lib/containerd"

@@ -39,6 +39,9 @@ terraform.rc
 *.env
 terraform/kubeconfig.yaml
 
+# Ignore Ansible Hosts
+ansible/inventory/hosts.yml
+
 # Node.js/Next.js temp files and directories
 node_modules/
 npm-debug.log*

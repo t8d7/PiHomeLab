@@ -1,0 +1,37 @@
+---
+# Global variables for all hosts
+timezone: "UTC"
+ntp_servers:
+  - "pool.ntp.org"
+  - "time.nist.gov"
+
+# Kubernetes cluster configuration
+k8s_cluster_name: "pi-homelab"
+k8s_api_server_port: 6443
+k8s_pod_network_cidr: "10.244.0.0/16"
+k8s_service_subnet: "10.96.0.0/12"
+
+# Container runtime
+container_runtime: "containerd"
+containerd_version: "1.7.8"
+
+# Network plugin
+cni_plugin: "flannel"
+flannel_version: "v0.22.3"
+
+# System packages to install
+system_packages:
+  - curl
+  - wget
+  - apt-transport-https
+  - ca-certificates
+  - gnupg
+  - lsb-release
+  - software-properties-common
+  - jq
+  - htop
+  - vim
+
+# Terraform prerequisites
+terraform_user: "terraform"
+terraform_kubeconfig_path: "/home/{{ terraform_user }}/.kube/config"

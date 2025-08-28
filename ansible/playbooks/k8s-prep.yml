@@ -1,0 +1,60 @@
+---
+- name: Prepare Kubernetes cluster for Terraform management
+  hosts: k8s_cluster
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Include system preparation tasks
+      include_tasks: tasks/system-prep.yml
+      
+    - name: Include container runtime setup
+      include_tasks: tasks/container-runtime.yml
+      
+    - name: Include Kubernetes installation
+      include_tasks: tasks/k8s-install.yml
+
+- name: Configure Kubernetes master nodes
+  hosts: k8s_masters
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Include master node configuration
+      include_tasks: tasks/k8s-master.yml
+      
+    - name: Include network plugin setup
+      include_tasks: tasks/network-plugin.yml
+
+- name: Configure Kubernetes worker nodes
+  hosts: k8s_workers
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Include worker node configuration
+      include_tasks: tasks/k8s-worker.yml
+
+- name: Setup Terraform prerequisites
+  hosts: k8s_masters[0]
+  become: yes
+  gather_facts: yes
+  
+  tasks:
+    - name: Include Terraform setup tasks
+      include_tasks: tasks/terraform-prep.yml
+
+  handlers:
+    - name: disable swap
+      command: swapoff -a
+      
+    - name: restart ntp
+      systemd:
+        name: ntp
+        state: restarted
+        enabled: yes
+        
+    - name: restart kubelet
+      systemd:
+        name: kubelet
+        state: restarted

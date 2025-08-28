@@ -1,0 +1,44 @@
+---
+- name: Download Flannel manifest
+  get_url:
+    url: "https://github.com/flannel-io/flannel/releases/download/{{ flannel_version }}/kube-flannel.yml"
+    dest: /tmp/kube-flannel.yml
+    mode: '0644'
+
+- name: Apply Flannel network plugin
+  kubernetes.core.k8s:
+    state: present
+    src: /tmp/kube-flannel.yml
+    kubeconfig: /etc/kubernetes/admin.conf
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Wait for Flannel pods to be ready
+  kubernetes.core.k8s_info:
+    api_version: v1
+    kind: Pod
+    namespace: kube-flannel
+    label_selectors:
+      - app=flannel
+    kubeconfig: /etc/kubernetes/admin.conf
+    wait: true
+    wait_condition:
+      type: Ready
+      status: "True"
+    wait_timeout: 300
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+- name: Remove taint from master node (for single-node testing)
+  kubernetes.core.k8s:
+    state: present
+    definition:
+      apiVersion: v1
+      kind: Node
+      metadata:
+        name: "{{ ansible_hostname }}"
+    merge_type: strategic-merge
+    kubeconfig: /etc/kubernetes/admin.conf
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  when: groups['k8s_workers'] | length == 0
